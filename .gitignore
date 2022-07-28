@@ -1,0 +1,9 @@
+**
+!include/
+!lib/
+!test/
+!.gitignore
+!*.txt
+!Makefile
+!*.md
+!LICENSE
