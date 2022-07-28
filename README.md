@@ -13,8 +13,3 @@ The another makefile example is https://github.com/ooshyun/makefile_sample
 Reference
 ----------
 - Makefile/CMakeLists.txt: https://github.com/doches/progressbar.
-
-@article{
-  author={Seunghyun Oh},
-  year={2022}
-}
