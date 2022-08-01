@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include <unistd.h>
+#include <unistd.h> // usleep
 
 #include "progressbar.h"
 #include "statusbar.h"
@@ -48,10 +48,13 @@ double* randfrom(double min, double max, uint32_t len)
 	}
 
 	// min-max regulation
+	printf("  Array\n");
 	for (index = 0; index < len; index++)
 	{
 		numArray[index] = (numArray[index] - _min) / (double)(_max - _min); // static cast
+		printf("%f, ", numArray[index]);
 	}
+	printf("\n-------------------------------------------n");
 
     return numArray; 
 }
@@ -105,9 +108,31 @@ void print_matrix_double(double const *x, int m, int n){
 	}
 }
 
+int cal_len_bin(int number)
+{
+	uint8_t count=0;
+	int buffer = number;
+	while(buffer!=1)
+	{
+		buffer /= 2;
+		count += 1; 
+	}
+	return count;
+}
+
 void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 {
 	printf("---------------test_mtx_mpy----------------\n");
+
+	int m = cal_len_bin(ncol);
+	if(m >= 29)
+	{
+		printf("The overlapped column is over the range\n");
+		return;
+	}
+	int n = 31-m; // signed, 32bit, -1 <= number <= 2
+	printf("(%d, %d) x (%d, %d) -> Q %d.%d\n", nrow, ncol, ncol, ncolOther, m, n);
+	printf("-------------------------------------------n");
 
     size_t sizeXmtx = sizeof(double) * nrow * ncol;
     size_t sizeYmtx = sizeof(double) * ncol * ncolOther;
@@ -132,12 +157,14 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
     printf("Successfully allocated memory for matrices\n");
 
 	int i=0, j=0, k=0;
+	
+	// number
 #ifdef RUN_PROGRESS_BAR
 	progressbar *progress = progressbar_new("matrix X generating...",nrow*ncol);
 #endif
 	for(i = 0; i < nrow; i++){
 		for(j = 0; j < ncol; j++){
-			ptrXmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrXmtx[i*ncol+j], 0, 31);
+			ptrXmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrXmtx[i*ncol+j], m, n);
 
 #ifdef RUN_PROGRESS_BAR
 			progressbar_inc(progress);
@@ -154,7 +181,7 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 
 	for(i = 0; i < ncol; i++){
 		for(j = 0; j < ncolOther; j++){
-			ptrYmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrYmtx[i*ncol+j], 0, 31);
+			ptrYmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrYmtx[i*ncol+j], m, n);
 #ifdef RUN_PROGRESS_BAR
 			progressbar_inc(progress);
 #endif
@@ -200,14 +227,17 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 #endif
 
 	start = clock();
+	double buffer = 0;
 	for(i = 0; i < nrow; i++){
 		for(j = 0; j < ncolOther; j++){
+			buffer = 0;
             for(k = 0; k < ncol; k++){
-				out_fix[i*ncolOther+j] += ptrXmtxQ31[i*ncol+k] * ptrYmtxQ31[ncol*k + j];
+				buffer += FIX_TO_DOUBLE(ptrXmtxQ31[i*ncol+k], n) * FIX_TO_DOUBLE(ptrYmtxQ31[ncol*k + j], n);
 #ifdef RUN_PROGRESS_BAR
 				progressbar_inc(progress);
 #endif
             }
+			out_fix[i*ncolOther+j] = DOUBLE_TO_FIX(buffer, m, n);
 		}
 	}
 #ifdef RUN_PROGRESS_BAR
@@ -231,11 +261,11 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	// printf("  [custom, int32] %d rows, %f seconds\n", nrow, cpu_time_used);
 	// printf("-------------------------------------------\n");
 		
-	// printf("  out_float\n");
-	// print_matrix_double(out_float, nrow, ncolOther);
+	printf("  out_float\n");
+	print_matrix_double(out_float, nrow, ncolOther);
 
-	// printf("  out_fix=\n");
-	// print_matrix_fix(out_fix, nrow, ncolOther, 30);
+	printf("  out_fix=\n");
+	print_matrix_fix(out_fix, nrow, ncolOther, n);
     
 
     if (ptrXmtx==NULL) 
@@ -297,7 +327,7 @@ void main_mtx()
 
 	uint16_t row = 0;
 	uint8_t i = 0;
-	for(i=0; i<20; i++) {
+	for(i=0; i<4; i++) {
 		printf("  %d th\n", i+1);
 		row = (uint16_t)(trunc(pow((double)(2), (double)(i+1))));
 		test_mtx_mpy(row, row, row); // test matrix
