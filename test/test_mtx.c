@@ -1,3 +1,7 @@
+#ifdef __NATUREDSP_SIGNAL_H__
+#include "NatureDSP_Signal.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,15 +14,22 @@
 
 // #define RUN_PROGRESS_BAR
 
+#define RUN_RANDOM_VAR_Q0_31
+
+// #define RUN_STATIC_ARRAY
+#ifdef RUN_STATIC_ARRAY
+#define SIZE 2
+#endif
+
 // [TODO] How to remain the log ?
-void easysleep()
-{
-	// struct timespec a;
-	// a.tv_sec  = 0;
-	// a.tv_nsec = 1000000;
-	// int rc = nanosleep( &a, NULL );
-	usleep(1);
-}
+// void easysleep()
+// {
+// 	// struct timespec a;
+// 	// a.tv_sec  = 0;
+// 	// a.tv_nsec = 1000000;
+// 	// int rc = nanosleep( &a, NULL );
+// 	usleep(1);
+// }
 
 /* generate a random floating point number from min to max */
 double* randfrom(double min, double max, uint32_t len) 
@@ -52,60 +63,25 @@ double* randfrom(double min, double max, uint32_t len)
 	for (index = 0; index < len; index++)
 	{
 		numArray[index] = (numArray[index] - _min) / (double)(_max - _min); // static cast
+#ifdef RUN_RANDOM_VAR_Q0_31
+        if(numArray[index] == 1){
+            numArray[index] -= 1;
+        }
+        if(numArray[index] == -1){
+            numArray[index] += 1;
+        }
+#endif
 		printf("%f, ", numArray[index]);
 	}
-	printf("\n-------------------------------------------n");
+	printf("\n-------------------------------------------\n");
 
     return numArray; 
 }
 
-int DOUBLE_TO_FIX(double x, int m ,int n){// return Q m.n
-	// double temp ;
-	double min_val, max_val;
-	min_val = -pow(2, m);
-	max_val =  pow(2, m) - pow(2, -n);
-
-	if      (x>max_val) return (int) round(max_val * pow(2, n));
-	else if (x<min_val) return (int) round(min_val * pow(2, n));
-	else                return (int) round(x       * pow(2, n));
-
-
-}
-
-double FIX_TO_DOUBLE(int x, int Q){
-	return (double)x / pow(2, Q);
-}
-
-void print_matrix_int(int const *x, int m, int n){
-	int i, j;
-	for(i=0;i<m;i++){
-		printf("[");
-		for(j=0;j<n;j++){
-			printf("%d  ", x[i*n+j]);
-		}
-		printf("]\n");
-	}
-}
-
-void print_matrix_fix(int const *x, int m, int n, int Q){
-	int i, j;
-	for(i=0;i<m;i++){
-		printf("[");
-		for(j=0;j<n;j++){
-			printf("%lg  ", FIX_TO_DOUBLE(x[i*n+j],Q));
-		}
-		printf("]\n");
-	}
-}
-void print_matrix_double(double const *x, int m, int n){
-	int i, j;
-	for(i=0;i<m;i++){
-		printf("[");
-		for(j=0;j<n;j++){
-			printf("%lg  ", x[i*n+j]);
-		}
-		printf("]\n");
-	}
+void custom_mtx_mpy(void* out, void* in1, void* in2, int N, int M, int P)
+{
+    // mtx_mpy((int*)out, (int*)in1, (int*)in2, N, M, P);
+	return;
 }
 
 int cal_len_bin(int number)
@@ -120,6 +96,67 @@ int cal_len_bin(int number)
 	return count;
 }
 
+// int DOUBLE_TO_FIX(double x, int m ,int n);
+// double FIX_TO_DOUBLE(int x, int Q);
+// void print_matrix_int(int const *x, int m, int n);
+// void print_matrix_fix(int const *x, int m, int n, int Q);
+// void print_matrix_double(double const *x, int m, int n);
+
+int DOUBLE_TO_FIX(double x, int m ,int n){// return Q m.n
+	// double temp ;
+	double min_val, max_val;
+	min_val = -pow(2, m);
+	max_val =  pow(2, m) - pow(2, -n);
+
+	if      (x>max_val) return (int) round(max_val * pow(2, n));
+	else if (x<min_val) return (int) round(min_val * pow(2, n));
+	else                return (int) round(x       * pow(2, n));
+
+
+}
+
+
+double FIX_TO_DOUBLE(int x, int Q){
+	return (double)x / pow(2, Q);
+}
+
+
+void print_matrix_int(int const *x, int m, int n){
+	int i, j;
+	for(i=0;i<m;i++){
+		printf("[");
+		for(j=0;j<n;j++){
+			printf("%d  ", x[i*n+j]);
+		}
+		printf("]\n");
+	}
+}
+
+
+void print_matrix_fix(int const *x, int m, int n, int Q){
+	int i, j;
+	for(i=0;i<m;i++){
+		printf("[");
+		for(j=0;j<n;j++){
+			printf("%lg  ", FIX_TO_DOUBLE(x[i*n+j],Q));
+		}
+		printf("]\n");
+	}
+}
+
+
+void print_matrix_double(double const *x, int m, int n){
+	int i, j;
+	for(i=0;i<m;i++){
+		printf("[");
+		for(j=0;j<n;j++){
+			printf("%lg  ", x[i*n+j]);
+		}
+		printf("]\n");
+	}
+}
+
+
 void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 {
 	printf("---------------test_mtx_mpy----------------\n");
@@ -130,30 +167,47 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 		printf("The overlapped column is over the range\n");
 		return;
 	}
-	int n = 31-m; // signed, 32bit, -1 <= number <= 2
-	printf("(%d, %d) x (%d, %d) -> Q %d.%d\n", nrow, ncol, ncol, ncolOther, m, n);
-	printf("-------------------------------------------n");
+	int n = 31-m; // signed, 32bit, -1 <= random number <= 1
 
-    size_t sizeXmtx = sizeof(double) * nrow * ncol;
-    size_t sizeYmtx = sizeof(double) * ncol * ncolOther;
-    size_t sizeOutmtx = sizeof(double) * nrow * ncolOther;
+#ifdef RUN_RANDOM_VAR_Q0_31
+    int m_Q0_31 = 0;
+    int n_Q0_31 = 31;
+	m = m_Q0_31;
+	n = n_Q0_31;
+#endif
+
+    printf("(%d, %d) x (%d, %d) -> Q %d.%d\n", nrow, ncol, ncol, ncolOther, m, n);
+    printf("-------------------------------------------\n");
+    size_t sizeXmtxDouble = sizeof(double) * nrow * ncol;
+    size_t sizeYmtxDouble = sizeof(double) * ncol * ncolOther;
+    size_t sizeOutmtxDouble = sizeof(double) * nrow * ncolOther;
+    size_t sizeXmtxInt = sizeof(int) * nrow * ncol;
+    size_t sizeYmtxInt = sizeof(int) * ncol * ncolOther;
+    size_t sizeOutmtxInt = sizeof(int) * nrow * ncolOther;
+
+    double* ptrXmtx = (double *)malloc(sizeXmtxDouble);
+    double* ptrYmtx = (double *)malloc(sizeYmtxDouble);
+    ptrXmtx = randfrom(-1, 1, nrow * ncol);
+    ptrYmtx = randfrom(-1, 1, ncol * ncolOther);
     
-    double* ptrXmtx = (double *)malloc(sizeXmtx);
-    double* ptrYmtx = (double *)malloc(sizeYmtx);
-	ptrXmtx = randfrom(-1, 1, nrow * ncol);
-	ptrYmtx = randfrom(-1, 1, ncol * ncolOther);
+	double* out_float = (double *)malloc(sizeOutmtxDouble);
+    memset(out_float, 0, sizeOutmtxDouble);
+    int* out_fix = (int *)malloc(sizeOutmtxInt);
+    memset(out_fix, 0, sizeOutmtxInt);
 
-	// https://docs.w3cub.com/cpp/memory/c/aligned_alloc
-	// https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
-    int* ptrXmtxQ31 = (int *)aligned_alloc(8, sizeXmtx); // make the data to __attribute__((aligned(8)))
-    int* ptrYmtxQ31 = (int *)aligned_alloc(8, sizeYmtx);
+    // https://docs.w3cub.com/cpp/memory/c/aligned_alloc
+    // https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
+    int* ptrXmtxQ31 = (int *)aligned_alloc(8, sizeXmtxInt); // make the data to __attribute__((aligned(8)))
+    int* ptrYmtxQ31 = (int *)aligned_alloc(8, sizeYmtxInt);
 
-    double* out_float = (double *)malloc(sizeOutmtx);
-    memset(out_float, 0, sizeOutmtx);
-    
-    int* out_fix = (int *)malloc(sizeOutmtx);
-    memset(out_fix, 0, sizeOutmtx);
-
+#ifdef RUN_STATIC_ARRAY
+    int XmtxQ31[SIZE][SIZE] __attribute__((aligned(8)));
+    int YmtxQ31[SIZE][SIZE] __attribute__((aligned(8)));
+    int out_fix_custom[SIZE][SIZE] = {0};
+#else
+    int* out_fix_custom = (int *)malloc(sizeOutmtxInt);
+    memset(out_fix_custom, 0, sizeOutmtxInt);
+#endif
     printf("Successfully allocated memory for matrices\n");
 
 	int i=0, j=0, k=0;
@@ -165,7 +219,9 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	for(i = 0; i < nrow; i++){
 		for(j = 0; j < ncol; j++){
 			ptrXmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrXmtx[i*ncol+j], m, n);
-
+#ifdef RUN_STATIC_ARRAY
+            XmtxQ31[i][j] = DOUBLE_TO_FIX(ptrXmtx[i*ncol+j], m, n);
+#endif
 #ifdef RUN_PROGRESS_BAR
 			progressbar_inc(progress);
 #endif
@@ -182,6 +238,9 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	for(i = 0; i < ncol; i++){
 		for(j = 0; j < ncolOther; j++){
 			ptrYmtxQ31[i*ncol+j] = DOUBLE_TO_FIX(ptrYmtx[i*ncol+j], m, n);
+#ifdef RUN_STATIC_ARRAY
+            YmtxQ31[i][j] = DOUBLE_TO_FIX(ptrYmtx[i*ncol+j], m, n);
+#endif
 #ifdef RUN_PROGRESS_BAR
 			progressbar_inc(progress);
 #endif
@@ -199,7 +258,6 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 #ifdef RUN_PROGRESS_BAR
 	progress = progressbar_new("matrix calculating...",nrow*ncol*ncolOther);		
 #endif
-
 	start = clock();
 	for(i = 0; i < nrow; i++){
 		for(j = 0; j < ncolOther; j++){
@@ -227,17 +285,25 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 #endif
 
 	start = clock();
-	double buffer = 0;
+	double tmp_number = 0;
+	int n_tmp_number = n;
+	int m_tmp_number = m;
 	for(i = 0; i < nrow; i++){
 		for(j = 0; j < ncolOther; j++){
-			buffer = 0;
+			tmp_number = 0;
+			n_tmp_number = n;
+			m_tmp_number = m;
             for(k = 0; k < ncol; k++){
-				buffer += FIX_TO_DOUBLE(ptrXmtxQ31[i*ncol+k], n) * FIX_TO_DOUBLE(ptrYmtxQ31[ncol*k + j], n);
+				tmp_number += FIX_TO_DOUBLE(ptrXmtxQ31[i*ncol+k], n) * FIX_TO_DOUBLE(ptrYmtxQ31[ncol*k + j], n);
 #ifdef RUN_PROGRESS_BAR
 				progressbar_inc(progress);
 #endif
             }
-			out_fix[i*ncolOther+j] = DOUBLE_TO_FIX(buffer, m, n);
+#ifdef RUN_RANDOM_VAR_Q0_31
+			n_tmp_number -= 1;
+			m_tmp_number += 1;
+#endif
+			out_fix[i*ncolOther+j] = DOUBLE_TO_FIX(tmp_number, m_tmp_number, n_tmp_number); // [TODO] Overflow
 		}
 	}
 #ifdef RUN_PROGRESS_BAR
@@ -250,23 +316,39 @@ void test_mtx_mpy(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	printf("  [simple, int32] %d rows, %f seconds\n", nrow, cpu_time_used);
 	printf("-------------------------------------------\n");
 
-	// start = clock();
+    start = clock();
 
-	// // custom_mtx_mpy(out_fix, ptrXmtxQ31, ptrYmtxQ31);
-
-	// end = clock();
-	// cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	
-	// printf("-------------------------------------------\n");
-	// printf("  [custom, int32] %d rows, %f seconds\n", nrow, cpu_time_used);
-	// printf("-------------------------------------------\n");
+#ifdef RUN_STATIC_ARRAY
+    //custom_mtx_mpy((int*)out_fix_custom, (int*)ptrXmtxQ31, (int*)ptrYmtxQ31, nrow, ncol, ncolOther); [TODO] Test wrapping
+    mtx_mpy(&out_fix_custom[0][0], &XmtxQ31[0][0], &YmtxQ31[0][0], SIZE, SIZE, SIZE);
+#else
+    // mtx_mpy((int*)out_fix_custom, (int*)ptrXmtxQ31, (int*)ptrYmtxQ31, nrow, ncol, ncolOther);
+#endif
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("-------------------------------------------\n");
+    printf("  [custom, int32] %d rows, %f seconds\n", nrow, cpu_time_used);
+    printf("-------------------------------------------\n");
 		
+	printf("\nResult\n");
+	printf("-------------------------------------------\n");
+
+#ifdef RUN_RANDOM_VAR_Q0_31
+	n -= 1;
+#endif
+	printf("%d\n",n);
+
 	printf("  out_float\n");
 	print_matrix_double(out_float, nrow, ncolOther);
 
-	printf("  out_fix=\n");
+	printf("  out_fix\n");
 	print_matrix_fix(out_fix, nrow, ncolOther, n);
-    
+
+#ifdef RUN_STATIC_ARRAY
+    print_matrix_fix(&out_fix_custom[0][0], nrow, ncolOther, n);
+#else
+    print_matrix_fix(out_fix_custom, nrow, ncolOther, n);    
+#endif
 
     if (ptrXmtx==NULL) 
         printf("Memory is not allocated\n");
@@ -327,7 +409,7 @@ void main_mtx()
 
 	uint16_t row = 0;
 	uint8_t i = 0;
-	for(i=0; i<4; i++) {
+	for(i=0; i<2; i++) {
 		printf("  %d th\n", i+1);
 		row = (uint16_t)(trunc(pow((double)(2), (double)(i+1))));
 		test_mtx_mpy(row, row, row); // test matrix
