@@ -5,5 +5,5 @@
 !.gitignore
 !*.txt
 !Makefile
-!*.md
+!README.md
 !LICENSE
