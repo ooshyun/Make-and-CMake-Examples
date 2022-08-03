@@ -84,7 +84,6 @@ void custom_mtx_mpy(void* out, void* in1, void* in2, int N, int M, int P)
 	return;
 }
 
-// [TODO] How to remain the log ?
 // void easysleep()
 // {
 // 	// struct timespec a;
@@ -333,6 +332,7 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	printf("  [simple, double] %d rows, %f seconds\n", nrow, cpu_time_used);
 	printf("-------------------------------------------\n");
 
+#ifndef RUN_IN_XTENSA
 	start = clock();
 	custom_mtx_mpy_fixed((int *)out_fix, (int *)ptrXmtxQ31, (int *)ptrYmtxQ31, nrow, ncol, ncolOther, m, n);
 	end = clock();
@@ -341,6 +341,7 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	printf("-------------------------------------------\n");
 	printf("  [simple, int32] %d rows, %f seconds\n", nrow, cpu_time_used);
 	printf("-------------------------------------------\n");
+#endif
 
     start = clock();
 #ifdef RUN_STATIC_ARRAY
@@ -363,8 +364,12 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	printf("%d\n",n);
 	printf("  out_float\n");
 	print_matrix_double(out_float, nrow, ncolOther);
+
+#ifdef RUN_IN_XTENSA
 	printf("  out_fix\n");
 	print_matrix_fix(out_fix, nrow, ncolOther, n);
+#endif
+
     printf("  out_fix_custom\n");
 #ifdef RUN_STATIC_ARRAY
     print_matrix_fix(&out_fix_custom[0][0], nrow, ncolOther, n);
