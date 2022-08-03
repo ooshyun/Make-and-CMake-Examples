@@ -105,6 +105,8 @@ double* randfrom(double min, double max, uint32_t len)
 	int64_t _max = 0;
 	int64_t _min = 0;
 	uint32_t index;
+
+#ifndef RUN_RANDOM_VAR_Q0_31
 	for (index = 0; index < len; index++)
 	{
 		numArray[index] = (double)rand();
@@ -118,20 +120,16 @@ double* randfrom(double min, double max, uint32_t len)
 		}
 		// easysleep();
 	}
-	// min-max regulation
+#endif
+	// min-max normalization
 	// printf("  Array\n");
 	for (index = 0; index < len; index++)
 	{
-		numArray[index] = (numArray[index] - _min) / (double)(_max - _min); // static cast
 #ifdef RUN_RANDOM_VAR_Q0_31
-        if(numArray[index] == 1){
-            numArray[index] -= 1;
-        }
-        if(numArray[index] == -1){
-            numArray[index] += 1;
-        }
-		numArray[index] /= len;
-#endif
+	numArray[index] = 0.0312499; // 0.03125 - row=1024, sum=1
+#else
+	numArray[index] = (numArray[index] - _min) / (double)(_max - _min); // 0-1
+#endif	
 		// printf("%f, ", numArray[index]);
 	}
 	// printf("\n-------------------------------------------\n");
@@ -240,8 +238,25 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
     size_t sizeXmtxDouble = sizeof(double) * nrow * ncol;
     size_t sizeYmtxDouble = sizeof(double) * ncol * ncolOther;
     size_t sizeOutmtxDouble = sizeof(double) * nrow * ncolOther;
-    size_t sizeXmtxInt = sizeof(int) * nrow * ncol;
-    size_t sizeYmtxInt = sizeof(int) * ncol * ncolOther;
+	size_t sizeXmtxInt, sizeYmtxInt;
+	
+	if(nrow*ncol ==1)
+	{
+		sizeXmtxInt = sizeof(int) * 2;
+	}
+	else
+	{
+    	sizeXmtxInt = sizeof(int) * nrow * ncol;
+	}
+	if(ncol*ncolOther ==1)
+	{
+		sizeYmtxInt = sizeof(int) * 2;
+	}
+	else
+	{
+		sizeYmtxInt = sizeof(int) * ncol * ncolOther;
+	}
+
     size_t sizeOutmtxInt = sizeof(int) * nrow * ncolOther;
     double* ptrXmtx = (double *)malloc(sizeXmtxDouble);
     double* ptrYmtx = (double *)malloc(sizeYmtxDouble);
@@ -253,6 +268,7 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
     memset(out_fix, 0, sizeOutmtxInt);
     // https://docs.w3cub.com/cpp/memory/c/aligned_alloc
     // https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
+
     int* ptrXmtxQ31 = (int *)aligned_alloc(8, sizeXmtxInt); // make the data to __attribute__((aligned(8)))
     int* ptrYmtxQ31 = (int *)aligned_alloc(8, sizeYmtxInt);
 
@@ -349,7 +365,7 @@ void test_mtx_mpy_custom(uint16_t nrow, uint16_t ncol, uint16_t ncolOther)
 	print_matrix_double(out_float, nrow, ncolOther);
 	printf("  out_fix\n");
 	print_matrix_fix(out_fix, nrow, ncolOther, n);
-    // printf("  out_fix_custom\n");
+    printf("  out_fix_custom\n");
 #ifdef RUN_STATIC_ARRAY
     print_matrix_fix(&out_fix_custom[0][0], nrow, ncolOther, n);
 #else
@@ -405,18 +421,79 @@ void test_rand(size_t size)
 	printf("\n");
 	free(numArray);
 }
+
+
+void test_mtx_mpy_1(){
+	uint16_t size = 1;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_2(){
+	uint16_t size = 2;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_4(){
+	uint16_t size = 4;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_8(){
+	uint16_t size = 8;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_16(){
+	uint16_t size = 16;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_32(){
+	uint16_t size = 32;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_64(){
+	uint16_t size = 64;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_128(){
+	uint16_t size = 128;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_256(){
+	uint16_t size = 256;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_512(){
+	uint16_t size = 512;
+	test_mtx_mpy_custom(size, size, size);
+}
+
+void test_mtx_mpy_1024(){
+	uint16_t size = 1024;
+	test_mtx_mpy_custom(size, size, size);
+}
+
 void main_mtx_custom()
 {
-	uint16_t row = 0;
-	uint8_t i = 0;
-	for(i=0; i<2; i++) { // C99 mode didn't allow defining variable inside for loop
-		printf("  %d th\n", i+1);
-		row = (uint16_t)(trunc(pow((double)(2), (double)(i+1))));
 #ifdef RUN_STATIC_ARRAY
-		row = SIZE;
+	test_mtx_mpy_custom(SIZE, SIZE, SIZE)
+#else
+	test_mtx_mpy_1();
+	test_mtx_mpy_2();
+	test_mtx_mpy_4();
+	test_mtx_mpy_8();
+	test_mtx_mpy_16();
+	test_mtx_mpy_32();
+	test_mtx_mpy_64();
+	test_mtx_mpy_128();
+	test_mtx_mpy_256();
+	test_mtx_mpy_512();
+	test_mtx_mpy_1024();
 #endif
-		test_mtx_mpy_custom(row, row, row); // test matrix
-		// test_rand((size_t)row); // test rand
-	}
 	// test_mtx_trans();
 }
