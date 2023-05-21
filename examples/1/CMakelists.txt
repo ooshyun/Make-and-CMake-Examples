@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.0.0)
+project (AssignementExample VERSION 0.1)
+
+set(CMAKE_OSX_ARCHITECTURES arm64)
+message("CMAKE_OSX_ARCHITECTURES: " ${CMAKE_OSX_ARCHITECTURES})
+
+# set(ARGU_BUILD_TYPE "lib" CACHE STRING "Description of the argument")
+message("Building for " ${ARGU_BUILD_TYPE})
+
+# build library
+if(ARGU_BUILD_TYPE STREQUAL "lib")
+  option(LIBRARY "Build library" ON)
+endif()
+
+if(ARGU_BUILD_TYPE STREQUAL "exe")
+  option(EXECUTE "Build execute" ON)
+endif()
+
+if(ARGU_BUILD_TYPE STREQUAL "gui")
+  option(EXECUTE_GUI "Build GUI execute" ON)
+endif()
+
+if(NOT EXECUTE_GUI AND NOT LIBRARY AND NOT EXECUTE)
+  option(LIBRARY "Build library" ON)
+  option(EXECUTE "Build execute" ON)
+endif()
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/Assignment)

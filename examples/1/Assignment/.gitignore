@@ -1,0 +1,6 @@
+**
+!.gitignore
+!*.txt
+!Assignment/
+!Assignment_Console/
+!AssignmentDLL/

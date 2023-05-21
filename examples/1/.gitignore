@@ -1,0 +1,6 @@
+**
+!.gitignore
+!*.sh
+!*.txt
+!build/
+!Assignment/
